@@ -5,20 +5,24 @@ import "../styles/Summary.css";
 const Summary = () => {
   const [transactions, setTransactions] = useState([]);
   const [filteredTransactions, setFilteredTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [selectedType, setSelectedType] = useState("");  // State to track selected filter type
 
+  // Fetch transactions from the API on page load but don't set them to filteredTransactions until a filter is applied
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
+        setLoading(true);  // Set loading to true when fetching
         const response = await axios.get(
           "https://ledegermanagement-backend.onrender.com/api/transactions"
         );
-        setTransactions(response.data);
-        setFilteredTransactions(response.data);
+        setTransactions(response.data);  // Store all transactions but don't display them yet
       } catch (error) {
         console.error("Error fetching transactions:", error);
+        setError("Failed to load transactions. Please try again later.");
       } finally {
-        setLoading(false);
+        setLoading(false);  // Set loading to false after fetching is done
       }
     };
 
@@ -26,13 +30,10 @@ const Summary = () => {
   }, []);
 
   const handleFilter = (type) => {
-    if (type === "All") {
-      setFilteredTransactions(transactions);
-    } else {
-      setFilteredTransactions(
-        transactions.filter((transaction) => transaction.type === type)
-      );
-    }
+    setSelectedType(type);  // Update the selected type
+    setFilteredTransactions(
+      transactions.filter((transaction) => transaction.type === type)  // Filter transactions based on the type
+    );
   };
 
   const calculateAmount = (transaction) => {
@@ -47,10 +48,11 @@ const Summary = () => {
   };
 
   const calculateTotalAmount = () => {
-    return filteredTransactions.reduce(
+    const total = filteredTransactions.reduce(
       (total, transaction) => total + calculateAmount(transaction),
       0
     );
+    return total.toLocaleString("en-IN");  // Format the total with commas for better readability
   };
 
   const calculateSellSummary = () => {
@@ -132,7 +134,6 @@ const Summary = () => {
 
       <div className="filter-buttons">
         {[
-          "All",
           "Tobacco Mastri",
           "Cows Adduluu Araka",
           "Tobacco Investment",
@@ -149,8 +150,13 @@ const Summary = () => {
         ))}
       </div>
 
+      {/* Conditional Rendering of Header based on the selected filter */}
+      {selectedType && <h1>{selectedType} Ledger</h1>}  {/* Displays the type of the selected filter */}
+
       {loading ? (
         <p>Loading transactions...</p>
+      ) : error ? (
+        <p className="error-message">{error}</p>
       ) : filteredTransactions.length > 0 ? (
         <>
           <table className="transaction-table">
@@ -203,7 +209,7 @@ const Summary = () => {
             ) && (
               <>
                 <p>Total Quantity: {calculateSellSummary().totalQuantity}</p>
-                <p>Total Price: ₹{calculateSellSummary().totalPrice}</p>
+                <p>Total Price: ₹{calculateSellSummary().totalPrice.toLocaleString("en-IN")}</p>
                 <p>Average Price: ₹{calculateSellSummary().averagePrice}</p>
               </>
             )}
